@@ -29,6 +29,15 @@ with open('service_account.json', 'w') as f:
 
 GDRIVE_JSON_KEY = 'service_account.json'
 
+def upload_to_drive(file_path, folder_id):
+    creds = service_account.Credentials.from_service_account_file(
+        GDRIVE_JSON_KEY, scopes=['https://www.googleapis.com/auth/drive'])
+    service = build('drive', 'v3', credentials=creds)
+    
+    file_metadata = {'name': os.path.basename(file_path), 'parents': [folder_id]}
+    media = MediaFileUpload(file_path, mimetype='image/jpeg')
+    service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
 def get_free_images(query, count=10):
     url = f"https://api.unsplash.com/photos/random?query={query}&count={count}&client_id={UNSPLASH_ACCESS_KEY}"
     response = requests.get(url)
@@ -56,5 +65,5 @@ for tag in tags:
         with open(filename, 'wb') as f:
             f.write(img_data)
 
-        upload_to_drive(filename, GDRIVE_FOLDER_ID, drive_service)
+        upload_to_drive(filename, GDRIVE_FOLDER_ID)
         os.remove(filename)
