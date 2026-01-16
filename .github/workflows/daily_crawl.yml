@@ -1,0 +1,20 @@
+name: Daily Image Crawler
+on:
+  schedule:
+    - cron: '0 0 * * *' # 매일 한국 시간 오전 9시 실행
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install requests google-api-python-client google-auth
+      - name: Run script
+        run: python main.py
+        env:
+          UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
+          # JSON 키는 GitHub Secrets에 저장하여 보안 유지
