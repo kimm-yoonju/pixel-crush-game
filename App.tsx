@@ -6,9 +6,12 @@ import GameCanvas from './components/GameCanvas';
 import SelectionSlots from './components/SelectionSlots';
 import BallBasket from './components/BallBasket';
 import EndScreen from './components/EndScreen';
+import GameIntro from './components/GameIntro';
+import PauseScreen from './components/PauseScreen';
 
 const App: React.FC = () => {
-    const [gameState, setGameState] = useState<GameState>(GameState.Playing);
+    const [gameState, setGameState] = useState<GameState>(GameState.Intro);
+    const [stage, setStage] = useState(1);
     const [pixels, setPixels] = useState<Pixel[]>([]);
     const [slots, setSlots] = useState<Slot[]>([]);
     const [basketBalls, setBasketBalls] = useState<Ball[]>([]);
@@ -24,8 +27,9 @@ const App: React.FC = () => {
     const timerRef = useRef<number | null>(null);
 
     const resetGame = useCallback(() => {
-        setGameState(GameState.Playing);
-
+        // This function sets up the board for the current stage.
+        // It's called when a new stage starts or when restarting.
+        
         // 1. Create a shuffled list of colors
         const colorsArray: Color[] = [];
         const pixelsPerColor = TOTAL_PIXELS / COLOR_NAMES.length;
@@ -62,26 +66,17 @@ const App: React.FC = () => {
         setPixels(newPixels);
         setPixelCounts(newPixelCounts);
 
-        // 3. Create balls for the basket. Each ball will have a count between 50 and 80.
-        // The total sum of counts must equal the total number of pixels (900).
-        // Since there are 5 colors and 900 pixels, each color corresponds to 180 pixels.
-        // We will create 3 balls for each color, with counts summing to 180.
+        // 3. Create balls for the basket
         const newBasketBalls: Ball[] = [];
         COLOR_NAMES.forEach(color => {
-            const totalForColor = newPixelCounts[color]; // This is 180
-
+            const totalForColor = newPixelCounts[color];
             const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-            // Partition 180 into three random numbers (c1, c2, c3) between 50 and 80.
             const c1 = randomInt(50, 80);
-            
             const remaining = totalForColor - c1;
             const minC2 = Math.max(50, remaining - 80);
             const maxC2 = Math.min(80, remaining - 50);
             const c2 = randomInt(minC2, maxC2);
-            
             const c3 = remaining - c2;
-            
             const counts = [c1, c2, c3];
             counts.forEach(count => {
                 if (count > 0) {
@@ -90,7 +85,6 @@ const App: React.FC = () => {
             });
         });
 
-        // Shuffle the balls for random order
         for (let i = newBasketBalls.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [newBasketBalls[i], newBasketBalls[j]] = [newBasketBalls[j], newBasketBalls[i]];
@@ -101,12 +95,14 @@ const App: React.FC = () => {
         setSlots(Array.from({ length: NUM_SLOTS }, (_, i) => ({ id: i, ball: null })));
     }, []);
 
+    // Effect to setup the first stage when the game starts playing
     useEffect(() => {
-        resetGame();
-    }, [resetGame]);
+        if (gameState === GameState.Playing) {
+            resetGame();
+        }
+    }, [gameState, stage, resetGame]);
 
     const gameTick = useCallback(() => {
-        // By processing only one pixel per tick, we create a staggered effect.
         for (let i = 0; i < slots.length; i++) {
             const slot = slots[i];
             
@@ -116,18 +112,10 @@ const App: React.FC = () => {
 
                 if (pixelToRemoveIndex !== -1) {
                     const pixelToRemove = pixels[pixelToRemoveIndex];
-                    
-                    // 1. Update pixels: remove the target pixel and make pixels above it fall
-                    let nextPixels = pixels.filter(p => p.id !== pixelToRemove.id);
-                    nextPixels = nextPixels.map(p => {
-                        if (p.x === pixelToRemove.x && p.y < pixelToRemove.y) {
-                            return { ...p, y: p.y + 1 };
-                        }
-                        return p;
-                    });
+                    const nextPixels = [...pixels];
+                    nextPixels.splice(pixelToRemoveIndex, 1);
                     setPixels(nextPixels);
 
-                    // 2. Update slots
                     const nextSlots = JSON.parse(JSON.stringify(slots));
                     const newCount = nextSlots[i].ball.count - 1;
                     if (newCount > 0) {
@@ -137,16 +125,11 @@ const App: React.FC = () => {
                     }
                     setSlots(nextSlots);
                     
-                    // 3. Update pixel counts
                     setPixelCounts(prevCounts => ({
                         ...prevCounts,
                         [colorToRemove]: prevCounts[colorToRemove] - 1,
                     }));
-
-                    // 4. Trigger visual effect for the removed pixel
                     setEffects([{ id: Math.random(), pixel: pixelToRemove }]);
-                    
-                    // 5. Exit after processing one pixel to wait for the next tick
                     return;
                 }
             }
@@ -157,43 +140,29 @@ const App: React.FC = () => {
         if (timerRef.current) {
             clearTimeout(timerRef.current);
         }
-
         const canMakeMove = slots.some(s => s.ball && s.ball.count > 0 && (pixelCounts[s.ball.color] ?? 0) > 0);
-
         const gameLoop = () => {
             gameTick();
             timerRef.current = window.setTimeout(gameLoop, GAME_SPEED);
         };
-
         if (gameState === GameState.Playing && canMakeMove) {
             gameLoop();
         }
-
         return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-            }
+            if (timerRef.current) clearTimeout(timerRef.current);
         };
     }, [gameState, gameTick, slots, pixelCounts]);
 
     useEffect(() => {
         if (gameState !== GameState.Playing) return;
-
-        // Win condition: no pixels left
         if (pixels.length === 0) {
             setGameState(GameState.Won);
             return;
         }
-
-        // Check for lose conditions if there are still pixels
         const canAnySlotMove = slots.some(s => s.ball && s.ball.count > 0 && pixelCounts[s.ball.color] > 0);
-
-        // If no moves can be made from the slots, check if the player is permanently stuck
         if (!canAnySlotMove) {
             const areSlotsFull = slots.every(s => s.ball !== null);
             const isBasketEmpty = basketBalls.length === 0;
-
-            // Lose if slots are full (can't place new balls) or if basket is empty (no new balls to place)
             if (areSlotsFull || isBasketEmpty) {
                 setGameState(GameState.Lost);
             }
@@ -211,10 +180,53 @@ const App: React.FC = () => {
         }
     }, [slots, gameState]);
 
+    const handleStartGame = () => {
+        setStage(1);
+        setGameState(GameState.Playing);
+    };
+
+    const handleRestartStage = () => {
+        setGameState(GameState.Playing);
+        resetGame();
+    };
+
+    const handleNextStage = () => {
+        setStage(prev => prev + 1);
+        setGameState(GameState.Playing);
+    };
+
+    const handleStartOver = () => {
+        setStage(1);
+        setGameState(GameState.Playing);
+    };
+
+    const handlePauseToggle = () => {
+        if (gameState === GameState.Playing) {
+            setGameState(GameState.Paused);
+        } else if (gameState === GameState.Paused) {
+            setGameState(GameState.Playing);
+        }
+    };
+
+    if (gameState === GameState.Intro) {
+        return <GameIntro onStart={handleStartGame} />;
+    }
+
     return (
         <div className="h-screen text-white flex flex-col items-center p-2 sm:p-4 font-sans antialiased">
             <div className="w-full max-w-md flex flex-col items-center h-full">
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-wider text-cyan-300 flex-shrink-0 py-2">Pixel Ball Clear</h1>
+                <div className="w-full flex justify-between items-center flex-shrink-0 py-2">
+                    <h1 className="text-3xl sm:text-4xl font-bold tracking-wider text-cyan-300">
+                        Stage {stage}
+                    </h1>
+                    <button
+                        onClick={handlePauseToggle}
+                        className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        aria-label="Pause Game"
+                    >
+                        Pause
+                    </button>
+                </div>
                 
                 <div className="w-full flex-grow flex items-center justify-center min-h-0 my-2">
                     <GameCanvas pixels={pixels} effects={effects} />
@@ -225,7 +237,14 @@ const App: React.FC = () => {
                     <BallBasket balls={basketBalls} onBallClick={handleBasketBallClick} />
                 </div>
             </div>
-            <EndScreen gameState={gameState} onRestart={resetGame} />
+            {gameState === GameState.Paused && <PauseScreen onResume={handlePauseToggle} />}
+            <EndScreen 
+                gameState={gameState} 
+                stage={stage}
+                onRestart={handleRestartStage}
+                onNextStage={handleNextStage}
+                onStartOver={handleStartOver}
+            />
         </div>
     );
 };

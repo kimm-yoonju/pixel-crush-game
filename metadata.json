@@ -1,5 +1,5 @@
 {
-  "name": "Pixel Ball Clear",
-  "description": "A puzzle game where the goal is to clear a grid of colored pixels by strategically selecting 'Number Balls'. Match colors to remove pixels and clear the board to win.",
+  "name": "Pixel Crush",
+  "description": "A strategic puzzle game about clearing pixels by matching colors.",
   "requestFramePermissions": []
 }

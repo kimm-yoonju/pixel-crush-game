@@ -8,15 +8,10 @@ interface GameCanvasProps {
     effects: Effect[];
 }
 
-interface VisualPixelData {
-    visualY: number;
-}
-
 const GameCanvas: React.FC<GameCanvasProps> = ({ pixels, effects }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const particlesRef = useRef<Particle[]>([]);
     const pixelsRef = useRef<Pixel[]>(pixels);
-    const visualPixelStateRef = useRef<Map<number, VisualPixelData>>(new Map());
     
     useEffect(() => {
         pixelsRef.current = pixels;
@@ -65,7 +60,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ pixels, effects }) => {
         const resizeCanvas = () => {
             const parent = canvas.parentElement;
             if (parent) {
-                const size = Math.min(parent.clientWidth, parent.clientHeight);
+                const size = parent.clientWidth;
                 if (canvas.width !== size) {
                     canvas.width = size;
                     canvas.height = size;
@@ -74,42 +69,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ pixels, effects }) => {
         };
 
         const render = () => {
-            resizeCanvas();
+            resizeCanvas(); // Check for resize on each frame
             const pixelSize = canvas.width / GRID_SIZE;
             
             ctx.fillStyle = '#1f2937';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const currentPixels = pixelsRef.current;
-            const visualState = visualPixelStateRef.current;
-            const currentPixelIds = new Set(currentPixels.map(p => p.id));
-
-            // Prune visual state for pixels that no longer exist
-            for (const id of visualState.keys()) {
-                if (!currentPixelIds.has(id)) {
-                    visualState.delete(id);
-                }
-            }
-            
-            // Draw pixels and update their animated positions
-            currentPixels.forEach(pixel => {
-                let visualData = visualState.get(pixel.id);
-                if (!visualData) {
-                    visualData = { visualY: pixel.y };
-                    visualState.set(pixel.id, visualData);
-                }
-
-                // Animate visualY towards the target pixel.y
-                const yDiff = pixel.y - visualData.visualY;
-                if (Math.abs(yDiff) > 0.01) {
-                    visualData.visualY += yDiff * 0.1; // Easing for smooth fall
-                } else {
-                    visualData.visualY = pixel.y; // Snap to final position
-                }
-
+            pixelsRef.current.forEach(pixel => {
                 ctx.fillStyle = COLORS[pixel.color];
                 const centerX = pixel.x * pixelSize + pixelSize / 2;
-                const centerY = visualData.visualY * pixelSize + pixelSize / 2;
+                const centerY = pixel.y * pixelSize + pixelSize / 2;
                 const radius = pixelSize / 2 - 1;
                 
                 ctx.beginPath();
@@ -117,7 +86,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ pixels, effects }) => {
                 ctx.fill();
             });
             
-            // Render particles
             particlesRef.current.forEach((p) => {
                 p.x += p.vx;
                 p.y += p.vy;
@@ -146,7 +114,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ pixels, effects }) => {
         <canvas
             ref={canvasRef}
             className="rounded-lg shadow-2xl border-2 border-gray-700 w-full"
-            style={{ aspectRatio: '1 / 1' }}
         />
     );
 };

@@ -26,7 +26,9 @@ export interface Slot {
 }
 
 export enum GameState {
+    Intro = 'Intro',
     Playing = 'Playing',
+    Paused = 'Paused',
     Won = 'Won',
     Lost = 'Lost',
 }
