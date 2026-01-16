@@ -30,3 +30,19 @@ export enum GameState {
     Won = 'Won',
     Lost = 'Lost',
 }
+
+export interface Particle {
+    id: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    life: number;
+    color: string;
+    size: number;
+}
+
+export interface Effect {
+    id: number;
+    pixel: Pixel;
+}

@@ -13,8 +13,8 @@ interface BallProps {
 const BallComponent: React.FC<BallProps> = ({ color, count, onClick, size = 'medium' }) => {
     const colorHex = COLORS[color];
     const sizeClasses = {
-        medium: 'w-16 h-16 text-xl',
-        large: 'w-24 h-24 text-3xl'
+        medium: 'w-12 h-12 text-sm sm:w-14 sm:h-14 sm:text-lg',
+        large: 'w-16 h-16 text-xl sm:w-20 sm:h-20 sm:text-2xl'
     };
     const cursorClass = onClick ? 'cursor-pointer hover:scale-110' : '';
 

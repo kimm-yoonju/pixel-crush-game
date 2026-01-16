@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Color, Pixel, Ball, Slot, GameState } from './types';
+import { Color, Pixel, Ball, Slot, GameState, Effect } from './types';
 import { GRID_SIZE, TOTAL_PIXELS, COLOR_NAMES, NUM_SLOTS, GAME_SPEED } from './constants';
 import GameCanvas from './components/GameCanvas';
 import SelectionSlots from './components/SelectionSlots';
@@ -12,7 +12,7 @@ const App: React.FC = () => {
     const [pixels, setPixels] = useState<Pixel[]>([]);
     const [slots, setSlots] = useState<Slot[]>([]);
     const [basketBalls, setBasketBalls] = useState<Ball[]>([]);
-    // FIX: Initialize pixelCounts with all colors from the Color enum to satisfy the Record<Color, number> type.
+    const [effects, setEffects] = useState<Effect[]>([]);
     const [pixelCounts, setPixelCounts] = useState<Record<Color, number>>({
         [Color.Red]: 0,
         [Color.Blue]: 0,
@@ -69,16 +69,12 @@ const App: React.FC = () => {
             let remaining = newPixelCounts[color];
             
             while (remaining > 0) {
-                // If the remaining amount is less than double the minimum,
-                // just create one last ball with the remaining count. This ensures all balls are >= minCount.
                 if (remaining < minCount * 2) {
                     if (remaining > 0) {
                        newBasketBalls.push({ color, count: remaining, id: `${color}-${remaining}-${Math.random()}` });
                     }
-                    break; // Exit loop
+                    break;
                 } else {
-                    // Determine a random count for the new ball.
-                    // The max is set to `remaining - minCount` to ensure the leftover part is at least `minCount`.
                     const maxCount = remaining - minCount;
                     const randomCount = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
                     
@@ -99,47 +95,45 @@ const App: React.FC = () => {
     }, [resetGame]);
 
     const gameTick = useCallback(() => {
-        // Create mutable copies of the current state to calculate the next state
-        let nextPixels = [...pixels];
-        let nextSlots = JSON.parse(JSON.stringify(slots)); // Deep copy to handle nested ball object
-        let nextPixelCounts = { ...pixelCounts };
-        let changesMade = false;
-
-        // Iterate over a snapshot of the slots to determine actions
-        slots.forEach((slot, index) => {
-            // Check if this slot is active and can make a move
-            if (slot.ball && slot.ball.count > 0 && nextPixelCounts[slot.ball.color] > 0) {
+        // By processing only one pixel per tick, we create a staggered effect.
+        for (let i = 0; i < slots.length; i++) {
+            const slot = slots[i];
+            
+            if (slot.ball && slot.ball.count > 0 && pixelCounts[slot.ball.color] > 0) {
                 const colorToRemove = slot.ball.color;
-                
-                // Find a pixel of the corresponding color in the *currently available* pixels for this tick
-                const pixelToRemoveIndex = nextPixels.findIndex(p => p.color === colorToRemove);
+                const pixelToRemoveIndex = pixels.findIndex(p => p.color === colorToRemove);
 
                 if (pixelToRemoveIndex !== -1) {
-                    changesMade = true;
+                    const pixelToRemove = pixels[pixelToRemoveIndex];
                     
-                    // Remove the pixel from our mutable copy for the next state
+                    // 1. Update pixels
+                    const nextPixels = [...pixels];
                     nextPixels.splice(pixelToRemoveIndex, 1);
-                    
-                    // Decrement the total count for that color
-                    nextPixelCounts[colorToRemove]--;
+                    setPixels(nextPixels);
 
-                    // Decrement the ball's count in the corresponding slot for the next state
-                    const newCount = nextSlots[index].ball.count - 1;
+                    // 2. Update slots
+                    const nextSlots = JSON.parse(JSON.stringify(slots));
+                    const newCount = nextSlots[i].ball.count - 1;
                     if (newCount > 0) {
-                        nextSlots[index].ball.count = newCount;
+                        nextSlots[i].ball.count = newCount;
                     } else {
-                        // If the ball is used up, clear the slot
-                        nextSlots[index].ball = null;
+                        nextSlots[i].ball = null;
                     }
+                    setSlots(nextSlots);
+                    
+                    // 3. Update pixel counts
+                    setPixelCounts(prevCounts => ({
+                        ...prevCounts,
+                        [colorToRemove]: prevCounts[colorToRemove] - 1,
+                    }));
+
+                    // 4. Trigger visual effect for the removed pixel
+                    setEffects([{ id: Math.random(), pixel: pixelToRemove }]);
+                    
+                    // 5. Exit after processing one pixel to wait for the next tick
+                    return;
                 }
             }
-        });
-
-        // If any pixels were removed, update the state all at once
-        if (changesMade) {
-            setPixels(nextPixels);
-            setSlots(nextSlots);
-            setPixelCounts(nextPixelCounts);
         }
     }, [pixels, slots, pixelCounts]);
 
@@ -156,7 +150,7 @@ const App: React.FC = () => {
         };
 
         if (gameState === GameState.Playing && canMakeMove) {
-            gameLoop(); // Start the loop immediately
+            gameLoop();
         }
 
         return () => {
@@ -194,19 +188,16 @@ const App: React.FC = () => {
     }, [slots, gameState]);
 
     return (
-        <div className="min-h-screen text-white flex flex-col items-center justify-center p-4 font-sans antialiased">
-            <div className="w-full max-w-4xl flex flex-col items-center gap-6">
-                <h1 className="text-4xl font-bold tracking-wider text-cyan-300">Pixel Ball Clear</h1>
+        <div className="h-screen text-white flex flex-col items-center p-2 sm:p-4 font-sans antialiased">
+            <div className="w-full max-w-md flex flex-col items-center h-full">
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-wider text-cyan-300 flex-shrink-0 py-2">Pixel Ball Clear</h1>
                 
-                <GameCanvas pixels={pixels} />
-
-                <div className="w-full flex flex-col items-center gap-4">
-                    <h2 className="text-2xl font-semibold text-gray-300">Selection Slots</h2>
-                    <SelectionSlots slots={slots} />
+                <div className="w-full flex-grow flex items-center justify-center min-h-0 my-2">
+                    <GameCanvas pixels={pixels} effects={effects} />
                 </div>
                 
-                <div className="w-full flex flex-col items-center gap-4">
-                    <h2 className="text-2xl font-semibold text-gray-300">Ball Basket</h2>
+                <div className="w-full flex flex-col items-center gap-2 sm:gap-4 flex-shrink-0">
+                    <SelectionSlots slots={slots} />
                     <BallBasket balls={basketBalls} onBallClick={handleBasketBallClick} />
                 </div>
             </div>

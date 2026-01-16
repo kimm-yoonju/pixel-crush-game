@@ -26,13 +26,13 @@ const EndScreen: React.FC<EndScreenProps> = ({ gameState, onRestart }) => {
     const message = messages[gameState];
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50">
-            <div className="bg-gray-800 p-8 rounded-lg shadow-2xl text-center animate-fade-in-down">
-                <h2 className={`text-5xl font-extrabold mb-2 ${message.titleClass}`}>{message.title}</h2>
-                <p className="text-xl text-gray-300 mb-8">{message.subtitle}</p>
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 p-6 sm:p-8 rounded-lg shadow-2xl text-center animate-fade-in-down">
+                <h2 className={`text-4xl sm:text-5xl font-extrabold mb-2 ${message.titleClass}`}>{message.title}</h2>
+                <p className="text-lg sm:text-xl text-gray-300 mb-6 sm:mb-8">{message.subtitle}</p>
                 <button
                     onClick={onRestart}
-                    className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105"
+                    className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-6 text-base sm:py-3 sm:px-8 sm:text-lg rounded-lg transition-transform transform hover:scale-105"
                 >
                     Restart Game
                 </button>

@@ -2,8 +2,6 @@
 import { Color } from './types';
 
 export const GRID_SIZE = 20;
-export const PIXEL_SIZE = 20;
-export const CANVAS_SIZE = GRID_SIZE * PIXEL_SIZE;
 export const NUM_SLOTS = 3;
 export const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
 

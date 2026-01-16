@@ -9,9 +9,9 @@ interface SelectionSlotsProps {
 
 const SelectionSlots: React.FC<SelectionSlotsProps> = ({ slots }) => {
     return (
-        <div className="flex gap-4 p-4 bg-gray-800/50 rounded-lg">
+        <div className="flex gap-2 sm:gap-4 p-2 bg-gray-800/50 rounded-lg">
             {slots.map(slot => (
-                <div key={slot.id} className="w-28 h-28 border-2 border-dashed border-gray-600 rounded-full flex items-center justify-center relative">
+                <div key={slot.id} className="w-16 h-16 sm:w-20 sm:h-20 border-2 border-dashed border-gray-600 rounded-full flex items-center justify-center relative">
                     {slot.ball ? (
                         <BallComponent 
                             color={slot.ball.color} 
@@ -19,7 +19,7 @@ const SelectionSlots: React.FC<SelectionSlotsProps> = ({ slots }) => {
                             size="large"
                         />
                     ) : (
-                        <span className="text-gray-500 text-sm">Empty</span>
+                        <span className="text-gray-500 text-xs sm:text-sm">Empty</span>
                     )}
                 </div>
             ))}
