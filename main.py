@@ -20,7 +20,7 @@ UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY')
 GDRIVE_JSON_STR = os.environ.get('GDRIVE_SERVICE_ACCOUNT_JSON')
 
 # 2. 구글 드라이브 폴더 ID (본인의 폴더 ID 입력)
-GDRIVE_FOLDER_ID = '11SdZ97QTvqmZW7p2eQb5mEPrRPUDnluC'
+GDRIVE_FOLDER_ID = '1xojyX1BF8eGN1ahV_qfqmSr36V_TTD85'
 
 # 3. 중요: Secrets에서 가져온 JSON 문자열을 실제 파일로 생성
 # 깃허브 컴퓨터(Runner)가 실행될 때 임시로 'service_account.json' 파일을 만듭니다.
