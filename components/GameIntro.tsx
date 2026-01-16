@@ -10,7 +10,7 @@ const GameIntro: React.FC<GameIntroProps> = ({ onStart }) => {
         <div
             className="h-screen text-white flex flex-col items-center justify-center p-4 font-sans antialiased"
             style={{
-                backgroundImage: `url('https://i.imgur.com/K1LdX5A.jpeg')`,
+                backgroundImage: `url('https://storage.googleapis.com/pixel_crush_img_bucket/cover.jpeg')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
             }}
