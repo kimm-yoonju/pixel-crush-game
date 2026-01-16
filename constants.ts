@@ -1,7 +1,6 @@
-
 import { Color } from './types';
 
-export const GRID_SIZE = 20;
+export const GRID_SIZE = 30;
 export const NUM_SLOTS = 3;
 export const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
 
@@ -15,4 +14,4 @@ export const COLORS: Record<Color, string> = {
 
 export const COLOR_NAMES = Object.values(Color);
 
-export const GAME_SPEED = 333; // Milliseconds per pixel removal (1000ms / 333ms ~= 3 pixels per second)
+export const GAME_SPEED = 600; // Milliseconds per pixel removal (1000ms / 600ms ~= 1.7 pixels per second)

@@ -62,29 +62,40 @@ const App: React.FC = () => {
         setPixels(newPixels);
         setPixelCounts(newPixelCounts);
 
-        // 3. Create balls for the basket based on pixel counts with random counts >= 20
+        // 3. Create balls for the basket. Each ball will have a count between 50 and 80.
+        // The total sum of counts must equal the total number of pixels (900).
+        // Since there are 5 colors and 900 pixels, each color corresponds to 180 pixels.
+        // We will create 3 balls for each color, with counts summing to 180.
         const newBasketBalls: Ball[] = [];
-        const minCount = 20;
         COLOR_NAMES.forEach(color => {
-            let remaining = newPixelCounts[color];
+            const totalForColor = newPixelCounts[color]; // This is 180
+
+            const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+            // Partition 180 into three random numbers (c1, c2, c3) between 50 and 80.
+            const c1 = randomInt(50, 80);
             
-            while (remaining > 0) {
-                if (remaining < minCount * 2) {
-                    if (remaining > 0) {
-                       newBasketBalls.push({ color, count: remaining, id: `${color}-${remaining}-${Math.random()}` });
-                    }
-                    break;
-                } else {
-                    const maxCount = remaining - minCount;
-                    const randomCount = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
-                    
-                    newBasketBalls.push({ color, count: randomCount, id: `${color}-${randomCount}-${Math.random()}` });
-                    remaining -= randomCount;
+            const remaining = totalForColor - c1;
+            const minC2 = Math.max(50, remaining - 80);
+            const maxC2 = Math.min(80, remaining - 50);
+            const c2 = randomInt(minC2, maxC2);
+            
+            const c3 = remaining - c2;
+            
+            const counts = [c1, c2, c3];
+            counts.forEach(count => {
+                if (count > 0) {
+                    newBasketBalls.push({ color, count, id: `${color}-${count}-${Math.random()}` });
                 }
-            }
+            });
         });
 
-        setBasketBalls(newBasketBalls.sort((a,b) => b.count - a.count));
+        // Shuffle the balls for random order
+        for (let i = newBasketBalls.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newBasketBalls[i], newBasketBalls[j]] = [newBasketBalls[j], newBasketBalls[i]];
+        }
+        setBasketBalls(newBasketBalls);
 
         // 4. Initialize empty slots
         setSlots(Array.from({ length: NUM_SLOTS }, (_, i) => ({ id: i, ball: null })));
@@ -106,9 +117,14 @@ const App: React.FC = () => {
                 if (pixelToRemoveIndex !== -1) {
                     const pixelToRemove = pixels[pixelToRemoveIndex];
                     
-                    // 1. Update pixels
-                    const nextPixels = [...pixels];
-                    nextPixels.splice(pixelToRemoveIndex, 1);
+                    // 1. Update pixels: remove the target pixel and make pixels above it fall
+                    let nextPixels = pixels.filter(p => p.id !== pixelToRemove.id);
+                    nextPixels = nextPixels.map(p => {
+                        if (p.x === pixelToRemove.x && p.y < pixelToRemove.y) {
+                            return { ...p, y: p.y + 1 };
+                        }
+                        return p;
+                    });
                     setPixels(nextPixels);
 
                     // 2. Update slots
@@ -163,18 +179,26 @@ const App: React.FC = () => {
     useEffect(() => {
         if (gameState !== GameState.Playing) return;
 
+        // Win condition: no pixels left
         if (pixels.length === 0) {
             setGameState(GameState.Won);
             return;
         }
 
-        const areSlotsFull = slots.every(s => s.ball !== null);
+        // Check for lose conditions if there are still pixels
         const canAnySlotMove = slots.some(s => s.ball && s.ball.count > 0 && pixelCounts[s.ball.color] > 0);
 
-        if (areSlotsFull && !canAnySlotMove && pixels.length > 0) {
-            setGameState(GameState.Lost);
+        // If no moves can be made from the slots, check if the player is permanently stuck
+        if (!canAnySlotMove) {
+            const areSlotsFull = slots.every(s => s.ball !== null);
+            const isBasketEmpty = basketBalls.length === 0;
+
+            // Lose if slots are full (can't place new balls) or if basket is empty (no new balls to place)
+            if (areSlotsFull || isBasketEmpty) {
+                setGameState(GameState.Lost);
+            }
         }
-    }, [pixels, slots, pixelCounts, gameState]);
+    }, [pixels, slots, basketBalls, pixelCounts, gameState]);
 
     const handleBasketBallClick = useCallback((clickedBall: Ball) => {
         if (gameState !== GameState.Playing) return;
